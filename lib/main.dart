@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:examen_parcial_2/models/task.dart';
 import 'package:examen_parcial_2/providers/task_provider.dart';
 
-
 void main() {
   runApp(MyApp());
 }
@@ -16,7 +15,12 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Examen Parcial 2',
         theme: ThemeData(
-          primarySwatch: Colors.blue,
+          primarySwatch: Colors.deepPurple, // Cambiado a un color más distintivo
+          visualDensity: VisualDensity.adaptivePlatformDensity,
+          buttonTheme: ButtonThemeData(
+            buttonColor: Colors.deepPurple,
+            textTheme: ButtonTextTheme.primary,
+          ),
         ),
         home: TaskListScreen(),
       ),
@@ -29,7 +33,6 @@ class TaskListScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final tasks = Provider.of<TaskProvider>(context).tasks;
 
-    // Función para navegar a la pantalla de edición de tareas
     void _navigateToEditTask(BuildContext context, Task task) {
       Navigator.push(
         context,
@@ -42,63 +45,65 @@ class TaskListScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text('Lista de Tareas'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.add),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => AddTaskScreen()),
+              );
+            },
+          ),
+        ],
       ),
-      body: ListView.builder(
+      body: tasks.isEmpty
+          ? Center(child: Text('No hay tareas, agrega una!'))
+          : ListView.builder(
         itemCount: tasks.length,
         itemBuilder: (context, index) {
           final task = tasks[index];
-          return ListTile(
-            title: Text(task.title),
-            subtitle: Text(task.description),
-            trailing: Checkbox(
-              value: task.isCompleted,
-              onChanged: (_) {
-                Provider.of<TaskProvider>(context, listen: false)
-                    .toggleTaskCompletion(index);
+          return Card( // Usando Card para un mejor aspecto visual
+            margin: EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+            child: ListTile(
+              title: Text(task.title, style: TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: Text(task.description),
+              trailing: Checkbox(
+                value: task.isCompleted,
+                onChanged: (_) {
+                  Provider.of<TaskProvider>(context, listen: false)
+                      .toggleTaskCompletion(index);
+                },
+              ),
+              onTap: () => _navigateToEditTask(context, task),
+              onLongPress: () {
+                showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return AlertDialog(
+                      title: Text('Eliminar Tarea'),
+                      content: Text('¿Seguro que quieres eliminar esta tarea?'),
+                      actions: <Widget>[
+                        TextButton(
+                          child: Text('Cancelar'),
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                        TextButton(
+                          child: Text('Eliminar'),
+                          onPressed: () {
+                            Provider.of<TaskProvider>(context, listen: false)
+                                .deleteTask(index);
+                            Navigator.of(context).pop();
+                          },
+                        ),
+                      ],
+                    );
+                  },
+                );
               },
             ),
-            onTap: () {
-              _navigateToEditTask(context, task); // Navegar a la pantalla de edición de tareas
-            },
-            onLongPress: () {
-              showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return AlertDialog(
-                    title: Text('Eliminar Tarea'),
-                    content: Text('¿Seguro que quieres eliminar esta tarea?'),
-                    actions: <Widget>[
-                      TextButton(
-                        child: Text('Cancelar'),
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                        },
-                      ),
-                      TextButton(
-                        child: Text('Eliminar'),
-                        onPressed: () {
-                          // Eliminar la tarea del proveedor de tareas
-                          Provider.of<TaskProvider>(context, listen: false)
-                              .deleteTask(index);
-                          Navigator.of(context).pop(); // Cerrar el diálogo
-                        },
-                      ),
-                    ],
-                  );
-                },
-              );
-            },
           );
         },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => AddTaskScreen()),
-          );
-        },
-        child: Icon(Icons.add),
       ),
     );
   }
@@ -112,7 +117,7 @@ class AddTaskScreen extends StatefulWidget {
 class _AddTaskScreenState extends State<AddTaskScreen> {
   final TextEditingController titleController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
-  bool isCompleted = false; // Estado inicial: tarea no completada
+  bool isCompleted = false;
 
   @override
   Widget build(BuildContext context) {
@@ -120,53 +125,66 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       appBar: AppBar(
         title: Text('Agregar Tarea'),
       ),
-      body: Padding(
+      body: SingleChildScrollView( // Para evitar overflow cuando el teclado está visible
         padding: EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             TextField(
               controller: titleController,
-              decoration: InputDecoration(labelText: 'Título'),
+              decoration: InputDecoration(
+                labelText: 'Título',
+                border: OutlineInputBorder(), // Agregado para mejor visualización
+                prefixIcon: Icon(Icons.title), // Icono para el título
+              ),
             ),
+            SizedBox(height: 10),
             TextField(
               controller: descriptionController,
-              decoration: InputDecoration(labelText: 'Descripción'),
+              decoration: InputDecoration(
+                labelText: 'Descripción',
+                border: OutlineInputBorder(), // Agregado para mejor visualización
+                prefixIcon: Icon(Icons.description), // Icono para la descripción
+              ),
+              maxLines: 3, // Permitir múltiples líneas para la descripción
             ),
+            SizedBox(height: 20),
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: <Widget>[
-                Text('Estado:'),
-                Checkbox(
+                Text('Tarea Completada:', style: TextStyle(fontSize: 16)),
+                Switch(
                   value: isCompleted,
                   onChanged: (value) {
                     setState(() {
-                      isCompleted = value!;
+                      isCompleted = value;
                     });
                   },
+                  activeColor: Colors.deepPurple, // Color cuando está activo
                 ),
               ],
             ),
             SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                // Obtener los valores ingresados en el formulario
-                final String title = titleController.text;
-                final String description = descriptionController.text;
-
-                // Crear una nueva tarea con los valores ingresados
-                final Task newTask = Task(
-                  title: title,
-                  description: description,
-                  isCompleted: isCompleted,
-                );
-
-                // Agregar la nueva tarea al proveedor de tareas
-                Provider.of<TaskProvider>(context, listen: false).addTask(newTask);
-
-                // Volver a la pantalla de lista de tareas
-                Navigator.pop(context);
-              },
-              child: Text('Guardar'),
+            Center(
+              child: ElevatedButton.icon(
+                icon: Icon(Icons.save),
+                label: Text('Guardar'),
+                onPressed: () {
+                  final String title = titleController.text;
+                  final String description = descriptionController.text;
+                  final Task newTask = Task(
+                    title: title,
+                    description: description,
+                    isCompleted: isCompleted,
+                  );
+                  Provider.of<TaskProvider>(context, listen: false).addTask(newTask);
+                  Navigator.pop(context);
+                },
+                style: ElevatedButton.styleFrom(
+                  primary: Colors.deepPurple, // Botón color principal
+                  onPrimary: Colors.white, // Texto color
+                ),
+              ),
             ),
           ],
         ),
@@ -176,13 +194,11 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
 
   @override
   void dispose() {
-    // Liberar los controladores al cerrar la pantalla
     titleController.dispose();
     descriptionController.dispose();
     super.dispose();
   }
 }
-
 
 class EditTaskScreen extends StatefulWidget {
   final Task task;
@@ -212,73 +228,85 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
       appBar: AppBar(
         title: Text('Editar Tarea'),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             TextField(
               controller: titleController,
-              decoration: InputDecoration(labelText: 'Título'),
+              decoration: InputDecoration(
+                labelText: 'Título',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.edit), // Icono para editar
+              ),
             ),
+            SizedBox(height: 10),
             TextField(
               controller: descriptionController,
-              decoration: InputDecoration(labelText: 'Descripción'),
+              decoration: InputDecoration(
+                labelText: 'Descripción',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.edit_note), // Icono para la descripción
+              ),
+              maxLines: 3,
             ),
+            SizedBox(height: 20),
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: <Widget>[
-                Text('Estado:'),
-                Checkbox(
+                Text('Tarea Completada:', style: TextStyle(fontSize: 16)),
+                Switch(
                   value: isCompleted,
                   onChanged: (value) {
                     setState(() {
-                      isCompleted = value!;
+                      isCompleted = value;
                     });
                   },
+                  activeColor: Colors.deepPurple,
                 ),
               ],
             ),
             SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                // Obtener los valores editados
-                final String updatedTitle = titleController.text;
-                final String updatedDescription = descriptionController.text;
-
-                // Actualizar la tarea en el proveedor de tareas
-                final Task updatedTask = Task(
-                  title: updatedTitle,
-                  description: updatedDescription,
-                  isCompleted: isCompleted,
-                );
-
-                Provider.of<TaskProvider>(context, listen: false).editTask(
-                  Provider.of<TaskProvider>(context, listen: false)
-                      .tasks
-                      .indexWhere((t) => t == widget.task),
-                  updatedTask,
-                );
-
-                // Volver a la pantalla de lista de tareas
-                Navigator.pop(context);
-              },
-              child: Text('Guardar Cambios'),
+            Center(
+              child: ElevatedButton.icon(
+                icon: Icon(Icons.save),
+                label: Text('Guardar Cambios'),
+                onPressed: () {
+                  final String updatedTitle = titleController.text;
+                  final String updatedDescription = descriptionController.text;
+                  final Task updatedTask = Task(
+                    title: updatedTitle,
+                    description: updatedDescription,
+                    isCompleted: isCompleted,
+                  );
+                  Provider.of<TaskProvider>(context, listen: false).editTask(
+                    Provider.of<TaskProvider>(context, listen: false).tasks.indexWhere((t) => t == widget.task),
+                    updatedTask,
+                  );
+                  Navigator.pop(context);
+                },
+                style: ElevatedButton.styleFrom(
+                  primary: Colors.deepPurple,
+                ),
+              ),
             ),
             SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: () {
-                // Eliminar la tarea actual del proveedor de tareas
-                Provider.of<TaskProvider>(context, listen: false).deleteTask(
-                  Provider.of<TaskProvider>(context, listen: false)
-                      .tasks
-                      .indexWhere((t) => t == widget.task),
-                );
-
-                // Volver a la pantalla de lista de tareas
-                Navigator.pop(context);
-              },
-              style: ElevatedButton.styleFrom(primary: Colors.red),
-              child: Text('Eliminar Tarea'),
+            Center(
+              child: ElevatedButton.icon(
+                icon: Icon(Icons.delete_forever),
+                label: Text('Eliminar Tarea'),
+                onPressed: () {
+                  Provider.of<TaskProvider>(context, listen: false).deleteTask(
+                    Provider.of<TaskProvider>(context, listen: false).tasks.indexWhere((t) => t == widget.task),
+                  );
+                  Navigator.pop(context);
+                },
+                style: ElevatedButton.styleFrom(
+                  primary: Colors.red,
+                  onPrimary: Colors.white,
+                ),
+              ),
             ),
           ],
         ),
